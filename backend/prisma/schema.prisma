@@ -1,0 +1,159 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  SUPER_ADMIN
+  ADMIN
+  USER
+}
+
+enum TaskStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  OVERDUE
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  username  String   @unique
+  password  String
+  name      String
+  role      Role     @default(USER)
+  language  String   @default("en")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  createdById Int?
+  createdBy   User?  @relation("UserCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  createdUsers User[] @relation("UserCreatedBy")
+
+  assignedTasks Task[]         @relation("TaskAssignedTo")
+  createdTasks  Task[]         @relation("TaskCreatedBy")
+  categories    Category[]
+  comments      Comment[]
+  activityLogs  ActivityLog[]
+  notifications Notification[]
+  shareLinks    ShareLink[]
+
+  @@index([createdById])
+}
+
+model Task {
+  id             Int        @id @default(autoincrement())
+  title          String
+  description    String?
+  status         TaskStatus @default(PENDING)
+  progress       Int        @default(0)
+  deadline       DateTime
+  scheduledStart DateTime?
+  completedAt    DateTime?
+  timeTaken      Int?
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  assignedToId Int
+  assignedTo   User @relation("TaskAssignedTo", fields: [assignedToId], references: [id], onDelete: Cascade)
+
+  createdById Int
+  createdBy   User @relation("TaskCreatedBy", fields: [createdById], references: [id], onDelete: Cascade)
+
+  categoryId Int?
+  category   Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+
+  comments      Comment[]
+  notifications Notification[]
+
+  @@index([createdById])
+  @@index([assignedToId])
+  @@index([status])
+  @@index([categoryId])
+  @@index([deadline])
+}
+
+model Category {
+  id          Int      @id @default(autoincrement())
+  name        String
+  description String?
+  createdAt   DateTime @default(now())
+
+  createdById Int
+  createdBy   User  @relation(fields: [createdById], references: [id], onDelete: Cascade)
+
+  tasks Task[]
+
+  @@index([createdById])
+}
+
+model Comment {
+  id        Int      @id @default(autoincrement())
+  content   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  taskId Int
+  task   Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  userId Int
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  parentId Int?
+  parent   Comment?  @relation("CommentThread", fields: [parentId], references: [id], onDelete: Cascade)
+  replies  Comment[] @relation("CommentThread")
+
+  @@index([taskId])
+  @@index([userId])
+  @@index([parentId])
+}
+
+model ActivityLog {
+  id         Int      @id @default(autoincrement())
+  action     String
+  entityType String
+  entityId   Int
+  details    String?
+  createdAt  DateTime @default(now())
+
+  userId Int
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([entityType, entityId])
+}
+
+model Notification {
+  id        Int      @id @default(autoincrement())
+  type      String
+  message   String
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  userId Int
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  taskId Int?
+  task   Task? @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([taskId])
+  @@index([userId, read])
+}
+
+model ShareLink {
+  id        Int       @id @default(autoincrement())
+  token     String    @unique
+  expiresAt DateTime?
+  createdAt DateTime  @default(now())
+
+  createdById Int
+  createdBy   User @relation(fields: [createdById], references: [id], onDelete: Cascade)
+
+  @@index([token])
+  @@index([createdById])
+}

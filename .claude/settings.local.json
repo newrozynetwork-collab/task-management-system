@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ls -1 \"/c/Users/PC/Desktop/Task Management/protend-package/protend/\"*.html)",
+      "Bash(npm install:*)",
+      "Bash(where node:*)",
+      "Bash(where npm:*)",
+      "Bash(cmd //c \"where node\")",
+      "Bash(cmd //c \"where npm\")",
+      "Bash(export PATH=\"$PATH:/c/Program Files/nodejs:/c/Program Files \\(x86\\)/nodejs:$LOCALAPPDATA/Programs/nodejs:$APPDATA/npm\")",
+      "Bash(npm --version)",
+      "Read(//c/Program Files/**)",
+      "Read(//c/Users/PC/Desktop/Task Management/frontend/$APPDATA/**)",
+      "Read(//c/Users/PC/Desktop/Task Management/frontend/$LOCALAPPDATA/**)",
+      "Bash(cmd //c \"node --version\")",
+      "Bash(gh auth:*)"
+    ]
+  }
+}
