@@ -14,6 +14,7 @@ const Sidebar = ({ isOpen, onToggle }) => {
     { to: '/tasks', icon: 'bx bx-task', label: t('nav.tasks'), all: true },
     { to: '/users', icon: 'bx bx-user', label: t('nav.users'), adminOnly: true },
     { to: '/categories', icon: 'bx bx-category', label: t('nav.categories'), adminOnly: true },
+    { to: '/login-links', icon: 'bx bx-link', label: t('nav.loginLinks'), adminOnly: true },
     { to: '/comments', icon: 'bx bx-comment-detail', label: t('nav.comments'), all: true },
     { to: '/activity', icon: 'bx bx-history', label: t('nav.activity'), adminOnly: true },
     { to: '/notifications', icon: 'bx bx-bell', label: t('nav.notifications'), all: true },

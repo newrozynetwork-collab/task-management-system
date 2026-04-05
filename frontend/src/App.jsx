@@ -15,6 +15,7 @@ const ActivityLog = lazy(() => import('./pages/ActivityLog'));
 const Notifications = lazy(() => import('./pages/Notifications'));
 const Profile = lazy(() => import('./pages/Profile'));
 const SharedAccess = lazy(() => import('./pages/SharedAccess'));
+const LoginLinks = lazy(() => import('./pages/LoginLinks'));
 
 const LoadingSpinner = () => (
   <div className="loading-spinner">
@@ -128,6 +129,14 @@ const App = () => {
               <PrivateRoute>
                 <Profile />
               </PrivateRoute>
+            }
+          />
+          <Route
+            path="/login-links"
+            element={
+              <RoleRoute roles={['SUPER_ADMIN', 'ADMIN']}>
+                <LoginLinks />
+              </RoleRoute>
             }
           />
           <Route path="/shared/:token" element={<SharedAccess />} />

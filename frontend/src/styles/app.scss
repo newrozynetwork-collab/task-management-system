@@ -1267,3 +1267,286 @@ body.dark {
   opacity: 0;
   transition: opacity 0.2s;
 }
+
+// ------------------------------------------------------------
+// 24. Task Actions Dropdown (React-controlled, no Bootstrap JS)
+// ------------------------------------------------------------
+.task-actions-dropdown {
+  position: relative;
+
+  .dropdown-trigger {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #e4e7ed;
+    border-radius: 6px;
+    background: #fff;
+    color: #6c757d;
+    cursor: pointer;
+    transition: all 0.15s;
+
+    &:hover {
+      border-color: #3C21F7;
+      color: #3C21F7;
+      background: rgba(60, 33, 247, 0.05);
+    }
+  }
+
+  .dropdown-menu-custom {
+    position: absolute;
+    right: 0;
+    top: calc(100% + 4px);
+    min-width: 180px;
+    background: #fff;
+    border: 1px solid #e4e7ed;
+    border-radius: 8px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
+    z-index: 1050;
+    padding: 6px 0;
+    animation: dropdownFadeIn 0.15s ease;
+
+    .dropdown-item-custom {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 16px;
+      font-size: 0.85rem;
+      color: #333;
+      cursor: pointer;
+      transition: background 0.12s;
+      border: none;
+      background: none;
+      width: 100%;
+      text-align: left;
+
+      &:hover {
+        background: #f8f9fc;
+      }
+
+      &.text-danger:hover {
+        background: rgba(220, 53, 69, 0.08);
+      }
+
+      i {
+        font-size: 1rem;
+        width: 18px;
+        text-align: center;
+      }
+    }
+
+    .dropdown-divider-custom {
+      height: 1px;
+      background: #eef0f5;
+      margin: 4px 0;
+    }
+  }
+}
+
+@keyframes dropdownFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+// Task card status indicator (left border)
+.task-card-status {
+  border-left: 3px solid transparent;
+
+  &.status-PENDING { border-left-color: #ffc107; }
+  &.status-IN_PROGRESS { border-left-color: #17a2b8; }
+  &.status-COMPLETED { border-left-color: #28a745; }
+  &.status-OVERDUE { border-left-color: #dc3545; }
+}
+
+// ------------------------------------------------------------
+// 25. Login Links Page
+// ------------------------------------------------------------
+.login-link-card {
+  background: #fff;
+  border-radius: 10px;
+  border: 1px solid #eef0f5;
+  padding: 16px;
+  margin-bottom: 12px;
+  transition: all 0.2s;
+
+  &:hover {
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+    border-color: rgba(60, 33, 247, 0.15);
+  }
+
+  .link-input-group {
+    display: flex;
+    align-items: center;
+    background: #f8f9fc;
+    border: 1px solid #e4e7ed;
+    border-radius: 8px;
+    overflow: hidden;
+
+    input {
+      flex: 1;
+      border: none;
+      background: transparent;
+      padding: 8px 12px;
+      font-size: 0.82rem;
+      color: #555;
+      outline: none;
+      font-family: monospace;
+    }
+
+    .btn-copy {
+      padding: 8px 14px;
+      border: none;
+      background: #3C21F7;
+      color: #fff;
+      font-size: 0.8rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s;
+      white-space: nowrap;
+
+      &:hover { background: darken(#3C21F7, 8%); }
+      &.copied {
+        background: #28a745;
+      }
+    }
+  }
+}
+
+// ------------------------------------------------------------
+// 26. Enhanced Card & Table Styles
+// ------------------------------------------------------------
+.card {
+  border: 1px solid #eef0f5;
+
+  &.shadow-sm {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  }
+}
+
+.table {
+  th {
+    font-weight: 600;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    color: #6c757d;
+    border-bottom-width: 2px;
+    padding: 12px 16px;
+    white-space: nowrap;
+  }
+
+  td {
+    padding: 12px 16px;
+    vertical-align: middle;
+    font-size: 0.875rem;
+  }
+
+  &-hover tbody tr {
+    transition: background 0.12s;
+  }
+}
+
+// Better badge styles
+.badge {
+  font-weight: 600;
+  font-size: 0.72rem;
+  padding: 4px 10px;
+  border-radius: 20px;
+  letter-spacing: 0.2px;
+}
+
+// Better modal styles
+.modal {
+  .modal-content {
+    border: none;
+    border-radius: 12px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+  }
+
+  .modal-header {
+    border-bottom: 1px solid #eef0f5;
+    padding: 16px 24px;
+
+    .modal-title {
+      font-weight: 700;
+      font-size: 1.05rem;
+    }
+  }
+
+  .modal-body {
+    padding: 24px;
+  }
+
+  .modal-footer {
+    border-top: 1px solid #eef0f5;
+    padding: 12px 24px;
+  }
+}
+
+// Form improvements
+.form-control, .form-select {
+  border-radius: 8px;
+  border-color: #e4e7ed;
+  padding: 9px 14px;
+  font-size: 0.875rem;
+  transition: all 0.15s;
+
+  &:focus {
+    border-color: #3C21F7;
+    box-shadow: 0 0 0 3px rgba(60, 33, 247, 0.1);
+  }
+}
+
+// Button improvements
+.btn {
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.85rem;
+  transition: all 0.15s;
+
+  &-sm {
+    padding: 5px 12px;
+    font-size: 0.8rem;
+  }
+}
+
+// RTL dropdown fix
+[dir="rtl"] {
+  .task-actions-dropdown .dropdown-menu-custom {
+    right: auto;
+    left: 0;
+  }
+
+  .task-card-status {
+    border-left: none;
+    border-right: 3px solid transparent;
+
+    &.status-PENDING { border-right-color: #ffc107; }
+    &.status-IN_PROGRESS { border-right-color: #17a2b8; }
+    &.status-COMPLETED { border-right-color: #28a745; }
+    &.status-OVERDUE { border-right-color: #dc3545; }
+  }
+
+  .login-link-card .link-input-group input {
+    text-align: left;
+    direction: ltr;
+  }
+}
+
+// Toast improvements
+.react-hot-toast {
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+// Better scrollbar for RTL
+[dir="rtl"] ::-webkit-scrollbar {
+  width: 6px;
+}

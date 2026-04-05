@@ -6,15 +6,20 @@ const prisma = new PrismaClient();
 async function main() {
   console.log("Seeding database...");
 
+  // Check if already seeded
+  const existingUsers = await prisma.user.count();
+  if (existingUsers > 0) {
+    console.log("Database already seeded. Skipping...");
+    return;
+  }
+
   // Hash passwords
   const adminPassword = await bcrypt.hash("admin123", 10);
   const userPassword = await bcrypt.hash("user123", 10);
 
   // 1. Create Super Admin
-  const superAdmin = await prisma.user.upsert({
-    where: { username: "superadmin" },
-    update: {},
-    create: {
+  const superAdmin = await prisma.user.create({
+    data: {
       username: "superadmin",
       password: adminPassword,
       name: "Super Admin",
@@ -25,10 +30,8 @@ async function main() {
   console.log("Created Super Admin:", superAdmin.username);
 
   // 2. Create Admin (created by Super Admin)
-  const admin1 = await prisma.user.upsert({
-    where: { username: "admin1" },
-    update: {},
-    create: {
+  const admin1 = await prisma.user.create({
+    data: {
       username: "admin1",
       password: adminPassword,
       name: "Admin One",
@@ -40,10 +43,8 @@ async function main() {
   console.log("Created Admin:", admin1.username);
 
   // 3. Create Users (created by Admin)
-  const user1 = await prisma.user.upsert({
-    where: { username: "user1" },
-    update: {},
-    create: {
+  const user1 = await prisma.user.create({
+    data: {
       username: "user1",
       password: userPassword,
       name: "User One",
@@ -54,10 +55,8 @@ async function main() {
   });
   console.log("Created User:", user1.username);
 
-  const user2 = await prisma.user.upsert({
-    where: { username: "user2" },
-    update: {},
-    create: {
+  const user2 = await prisma.user.create({
+    data: {
       username: "user2",
       password: userPassword,
       name: "User Two",
@@ -69,30 +68,24 @@ async function main() {
   console.log("Created User:", user2.username);
 
   // 4. Create Categories (created by Admin)
-  const categoryDesign = await prisma.category.upsert({
-    where: { id: 1 },
-    update: {},
-    create: {
+  const categoryDesign = await prisma.category.create({
+    data: {
       name: "Design",
       description: "UI/UX design tasks",
       createdById: admin1.id,
     },
   });
 
-  const categoryDevelopment = await prisma.category.upsert({
-    where: { id: 2 },
-    update: {},
-    create: {
+  const categoryDevelopment = await prisma.category.create({
+    data: {
       name: "Development",
       description: "Software development tasks",
       createdById: admin1.id,
     },
   });
 
-  const categoryMarketing = await prisma.category.upsert({
-    where: { id: 3 },
-    update: {},
-    create: {
+  const categoryMarketing = await prisma.category.create({
+    data: {
       name: "Marketing",
       description: "Marketing and promotion tasks",
       createdById: admin1.id,
@@ -167,9 +160,7 @@ async function main() {
   ];
 
   for (const task of tasks) {
-    await prisma.task.create({
-      data: task,
-    });
+    await prisma.task.create({ data: task });
   }
   console.log(`Created ${tasks.length} sample tasks`);
 
