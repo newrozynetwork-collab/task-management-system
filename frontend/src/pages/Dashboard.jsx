@@ -5,7 +5,7 @@ import { useAuth } from '../contexts/AuthContext';
 import api from '../services/api';
 import toast from 'react-hot-toast';
 import Layout from '../components/layout/Layout';
-import { formatDistanceToNow, format, isPast } from 'date-fns';
+import { formatDistanceToNow, format } from 'date-fns';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -27,11 +27,8 @@ const StatusBadge = ({ status }) => {
     IN_PROGRESS: { bg: '#dbeafe', color: '#1e40af' },
     PENDING: { bg: '#fef3c7', color: '#92400e' },
     OVERDUE: { bg: '#fee2e2', color: '#991b1b' },
-    CANCELLED: { bg: '#f3f4f6', color: '#374151' },
   };
-
   const style = colorMap[status] || colorMap.PENDING;
-
   return (
     <span
       className="badge rounded-pill px-2 py-1"
@@ -44,23 +41,16 @@ const StatusBadge = ({ status }) => {
 
 const StatCard = ({ icon, label, value, gradient }) => (
   <div className="col-6 col-lg-3 mb-3">
-    <div
-      className="box card border-0 shadow-sm h-100"
-      style={{ borderRadius: 12, overflow: 'hidden' }}
-    >
+    <div className="card border-0 shadow-sm h-100" style={{ borderRadius: 12 }}>
       <div className="card-body d-flex align-items-center gap-3 p-3">
         <div
           className="d-flex align-items-center justify-content-center rounded-3 flex-shrink-0"
-          style={{
-            width: 48,
-            height: 48,
-            background: gradient,
-          }}
+          style={{ width: 48, height: 48, background: gradient }}
         >
           <i className={`bx ${icon} text-white`} style={{ fontSize: 24 }} />
         </div>
         <div className="min-w-0">
-          <div className="fw-bold fs-4 lh-1 mb-1">{value ?? '--'}</div>
+          <div className="fw-bold fs-4 lh-1 mb-1">{value != null ? value : 0}</div>
           <div className="text-muted small text-truncate">{label}</div>
         </div>
       </div>
@@ -88,7 +78,6 @@ const Dashboard = () => {
         api.get('/dashboard/overdue'),
         api.get('/dashboard/chart-data'),
       ]);
-
       setStats(statsRes.data);
       setRecentTasks(recentRes.data);
       setOverdueTasks(overdueRes.data);
@@ -104,7 +93,9 @@ const Dashboard = () => {
     fetchDashboardData();
   }, [fetchDashboardData]);
 
-  // Chart configurations
+  // Build chart data from API response
+  // Backend returns: byStatus: { COMPLETED: n, IN_PROGRESS: n, PENDING: n, OVERDUE: n }
+  // Backend returns: monthlyCompletions: { "2026-01": n, "2026-02": n, ... }
   const doughnutData = {
     labels: [
       t('status.completed', 'Completed'),
@@ -116,10 +107,10 @@ const Dashboard = () => {
       {
         data: chartData
           ? [
-              chartData.byStatus?.completed || 0,
-              chartData.byStatus?.inProgress || 0,
-              chartData.byStatus?.pending || 0,
-              chartData.byStatus?.overdue || 0,
+              chartData.byStatus?.COMPLETED || 0,
+              chartData.byStatus?.IN_PROGRESS || 0,
+              chartData.byStatus?.PENDING || 0,
+              chartData.byStatus?.OVERDUE || 0,
             ]
           : [0, 0, 0, 0],
         backgroundColor: ['#10b981', '#3b82f6', '#f59e0b', '#ef4444'],
@@ -141,12 +132,24 @@ const Dashboard = () => {
     },
   };
 
+  // Convert monthlyCompletions object to arrays for the bar chart
+  const monthlyLabels = chartData?.monthlyCompletions
+    ? Object.keys(chartData.monthlyCompletions)
+    : [];
+  const monthlyValues = chartData?.monthlyCompletions
+    ? Object.values(chartData.monthlyCompletions)
+    : [];
+
   const barData = {
-    labels: chartData?.monthly?.map((m) => m.label) || [],
+    labels: monthlyLabels.map((key) => {
+      const [year, month] = key.split('-');
+      const date = new Date(parseInt(year), parseInt(month) - 1);
+      return date.toLocaleString('default', { month: 'short', year: '2-digit' });
+    }),
     datasets: [
       {
         label: t('dashboard.completedTasks', 'Completed Tasks'),
-        data: chartData?.monthly?.map((m) => m.count) || [],
+        data: monthlyValues,
         backgroundColor: PRIMARY,
         borderRadius: 6,
         barPercentage: 0.6,
@@ -157,9 +160,7 @@ const Dashboard = () => {
   const barOptions = {
     responsive: true,
     maintainAspectRatio: false,
-    plugins: {
-      legend: { display: false },
-    },
+    plugins: { legend: { display: false } },
     scales: {
       y: {
         beginAtZero: true,
@@ -194,14 +195,14 @@ const Dashboard = () => {
         {/* Page Header */}
         <div className="mb-4">
           <h4 className="fw-bold mb-1">
-            {t('dashboard.welcome', 'Welcome back')}, {user?.fullName || user?.username}
+            {t('dashboard.welcome', 'Welcome back')}, {user?.name || user?.username}
           </h4>
           <p className="text-muted mb-0 small">
             {t('dashboard.overview', "Here's an overview of your tasks")}
           </p>
         </div>
 
-        {/* Primary Stats Row */}
+        {/* Primary Stats Row - mapped to actual backend field names */}
         <div className="row">
           <StatCard
             icon="bx-task"
@@ -212,90 +213,72 @@ const Dashboard = () => {
           <StatCard
             icon="bx-check-circle"
             label={t('dashboard.completed', 'Completed')}
-            value={stats?.completed}
+            value={stats?.completedTasks}
             gradient="linear-gradient(135deg, #10b981, #34d399)"
           />
           <StatCard
             icon="bx-loader-circle"
             label={t('dashboard.inProgress', 'In Progress')}
-            value={stats?.inProgress}
+            value={stats?.inProgressTasks}
             gradient="linear-gradient(135deg, #3b82f6, #60a5fa)"
           />
           <StatCard
             icon="bx-error-circle"
             label={t('dashboard.overdue', 'Overdue')}
-            value={stats?.overdue}
+            value={stats?.overdueTasks}
             gradient="linear-gradient(135deg, #ef4444, #f87171)"
           />
         </div>
 
-        {/* Admin Extra Stats */}
+        {/* Admin Extra Stats - mapped to actual backend field names */}
         {isAdmin && (
           <div className="row mb-3">
             <div className="col-md-4 mb-3">
-              <div className="box card border-0 shadow-sm h-100" style={{ borderRadius: 12 }}>
+              <div className="card border-0 shadow-sm h-100" style={{ borderRadius: 12 }}>
                 <div className="card-body d-flex align-items-center gap-3 p-3">
                   <div
                     className="d-flex align-items-center justify-content-center rounded-3"
-                    style={{
-                      width: 48,
-                      height: 48,
-                      background: 'linear-gradient(135deg, #8b5cf6, #a78bfa)',
-                    }}
+                    style={{ width: 48, height: 48, background: 'linear-gradient(135deg, #8b5cf6, #a78bfa)' }}
                   >
                     <i className="bx bx-group text-white" style={{ fontSize: 24 }} />
                   </div>
                   <div>
-                    <div className="fw-bold fs-4 lh-1 mb-1">{stats?.usersManaged ?? '--'}</div>
-                    <div className="text-muted small">
-                      {t('dashboard.usersManaged', 'Users Managed')}
-                    </div>
+                    <div className="fw-bold fs-4 lh-1 mb-1">{stats?.totalUsers ?? 0}</div>
+                    <div className="text-muted small">{t('dashboard.usersManaged', 'Users Managed')}</div>
                   </div>
                 </div>
               </div>
             </div>
             <div className="col-md-4 mb-3">
-              <div className="box card border-0 shadow-sm h-100" style={{ borderRadius: 12 }}>
+              <div className="card border-0 shadow-sm h-100" style={{ borderRadius: 12 }}>
                 <div className="card-body d-flex align-items-center gap-3 p-3">
                   <div
                     className="d-flex align-items-center justify-content-center rounded-3"
-                    style={{
-                      width: 48,
-                      height: 48,
-                      background: 'linear-gradient(135deg, #f59e0b, #fbbf24)',
-                    }}
+                    style={{ width: 48, height: 48, background: 'linear-gradient(135deg, #f59e0b, #fbbf24)' }}
                   >
                     <i className="bx bx-category text-white" style={{ fontSize: 24 }} />
                   </div>
                   <div>
-                    <div className="fw-bold fs-4 lh-1 mb-1">{stats?.categories ?? '--'}</div>
-                    <div className="text-muted small">
-                      {t('dashboard.categories', 'Categories')}
-                    </div>
+                    <div className="fw-bold fs-4 lh-1 mb-1">{stats?.totalCategories ?? 0}</div>
+                    <div className="text-muted small">{t('dashboard.categories', 'Categories')}</div>
                   </div>
                 </div>
               </div>
             </div>
             <div className="col-md-4 mb-3">
-              <div className="box card border-0 shadow-sm h-100" style={{ borderRadius: 12 }}>
+              <div className="card border-0 shadow-sm h-100" style={{ borderRadius: 12 }}>
                 <div className="card-body d-flex align-items-center gap-3 p-3">
                   <div
                     className="d-flex align-items-center justify-content-center rounded-3"
-                    style={{
-                      width: 48,
-                      height: 48,
-                      background: 'linear-gradient(135deg, #06b6d4, #22d3ee)',
-                    }}
+                    style={{ width: 48, height: 48, background: 'linear-gradient(135deg, #06b6d4, #22d3ee)' }}
                   >
                     <i className="bx bx-pie-chart-alt-2 text-white" style={{ fontSize: 24 }} />
                   </div>
                   <div>
                     <div className="fw-bold fs-4 lh-1 mb-1">
-                      {stats?.completionRate != null ? `${stats.completionRate}%` : '--'}
+                      {stats?.completionRate != null ? `${stats.completionRate}%` : '0%'}
                     </div>
-                    <div className="text-muted small">
-                      {t('dashboard.completionRate', 'Completion Rate')}
-                    </div>
+                    <div className="text-muted small">{t('dashboard.completionRate', 'Completion Rate')}</div>
                   </div>
                 </div>
               </div>
@@ -307,11 +290,9 @@ const Dashboard = () => {
         {chartData && (
           <div className="row mb-3">
             <div className="col-lg-5 mb-3">
-              <div className="box card border-0 shadow-sm h-100" style={{ borderRadius: 12 }}>
+              <div className="card border-0 shadow-sm h-100" style={{ borderRadius: 12 }}>
                 <div className="card-body p-3 p-md-4">
-                  <h6 className="fw-semibold mb-3">
-                    {t('dashboard.tasksByStatus', 'Tasks by Status')}
-                  </h6>
+                  <h6 className="fw-semibold mb-3">{t('dashboard.tasksByStatus', 'Tasks by Status')}</h6>
                   <div style={{ height: 260 }}>
                     <Doughnut data={doughnutData} options={doughnutOptions} />
                   </div>
@@ -319,11 +300,9 @@ const Dashboard = () => {
               </div>
             </div>
             <div className="col-lg-7 mb-3">
-              <div className="box card border-0 shadow-sm h-100" style={{ borderRadius: 12 }}>
+              <div className="card border-0 shadow-sm h-100" style={{ borderRadius: 12 }}>
                 <div className="card-body p-3 p-md-4">
-                  <h6 className="fw-semibold mb-3">
-                    {t('dashboard.monthlyCompletions', 'Monthly Completions')}
-                  </h6>
+                  <h6 className="fw-semibold mb-3">{t('dashboard.monthlyCompletions', 'Monthly Completions')}</h6>
                   <div style={{ height: 260 }}>
                     <Bar data={barData} options={barOptions} />
                   </div>
@@ -335,12 +314,10 @@ const Dashboard = () => {
 
         {/* Recent Tasks Table */}
         {recentTasks.length > 0 && (
-          <div className="box card border-0 shadow-sm mb-3" style={{ borderRadius: 12 }}>
+          <div className="card border-0 shadow-sm mb-3" style={{ borderRadius: 12 }}>
             <div className="card-body p-3 p-md-4">
               <div className="d-flex justify-content-between align-items-center mb-3">
-                <h6 className="fw-semibold mb-0">
-                  {t('dashboard.recentTasks', 'Recent Tasks')}
-                </h6>
+                <h6 className="fw-semibold mb-0">{t('dashboard.recentTasks', 'Recent Tasks')}</h6>
                 <button
                   className="btn btn-sm btn-link text-decoration-none"
                   style={{ color: PRIMARY }}
@@ -353,23 +330,13 @@ const Dashboard = () => {
                 <table className="table table-hover align-middle mb-0">
                   <thead>
                     <tr className="text-muted small">
-                      <th className="fw-semibold border-0 pb-2">
-                        {t('task.title', 'Title')}
-                      </th>
+                      <th className="fw-semibold border-0 pb-2">{t('task.title', 'Title')}</th>
                       {isAdmin && (
-                        <th className="fw-semibold border-0 pb-2">
-                          {t('task.assignedTo', 'Assigned To')}
-                        </th>
+                        <th className="fw-semibold border-0 pb-2">{t('task.assignedTo', 'Assigned To')}</th>
                       )}
-                      <th className="fw-semibold border-0 pb-2">
-                        {t('task.status', 'Status')}
-                      </th>
-                      <th className="fw-semibold border-0 pb-2">
-                        {t('task.deadline', 'Deadline')}
-                      </th>
-                      <th className="fw-semibold border-0 pb-2 text-end">
-                        {t('common.actions', 'Actions')}
-                      </th>
+                      <th className="fw-semibold border-0 pb-2">{t('task.status', 'Status')}</th>
+                      <th className="fw-semibold border-0 pb-2">{t('task.deadline', 'Deadline')}</th>
+                      <th className="fw-semibold border-0 pb-2 text-end">{t('common.actions', 'Actions')}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -384,25 +351,19 @@ const Dashboard = () => {
                         </td>
                         {isAdmin && (
                           <td className="border-0 text-muted small">
-                            {task.assignedTo?.fullName || task.assignedTo?.username || '--'}
+                            {task.assignedTo?.name || task.assignedTo?.username || '--'}
                           </td>
                         )}
                         <td className="border-0">
                           <StatusBadge status={task.status} />
                         </td>
                         <td className="border-0 text-muted small">
-                          {task.deadline
-                            ? format(new Date(task.deadline), 'MMM dd, yyyy')
-                            : '--'}
+                          {task.deadline ? format(new Date(task.deadline), 'MMM dd, yyyy') : '--'}
                         </td>
                         <td className="border-0 text-end">
                           <button
                             className="btn btn-sm btn-light rounded-circle"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              navigate(`/tasks/${task.id}`);
-                            }}
-                            title={t('common.view', 'View')}
+                            onClick={(e) => { e.stopPropagation(); navigate(`/tasks/${task.id}`); }}
                           >
                             <i className="bx bx-chevron-right" />
                           </button>
@@ -418,21 +379,18 @@ const Dashboard = () => {
 
         {/* Overdue Tasks */}
         {overdueTasks.length > 0 && (
-          <div className="box card border-0 shadow-sm" style={{ borderRadius: 12 }}>
+          <div className="card border-0 shadow-sm" style={{ borderRadius: 12 }}>
             <div className="card-body p-3 p-md-4">
               <h6 className="fw-semibold mb-3 text-danger d-flex align-items-center gap-2">
                 <i className="bx bx-error-circle" />
                 {t('dashboard.overdueTasks', 'Overdue Tasks')}
-                <span className="badge bg-danger rounded-pill ms-1">
-                  {overdueTasks.length}
-                </span>
+                <span className="badge bg-danger rounded-pill ms-1">{overdueTasks.length}</span>
               </h6>
               <div className="row">
                 {overdueTasks.map((task) => {
                   const overdueBy = task.deadline
                     ? formatDistanceToNow(new Date(task.deadline), { addSuffix: false })
                     : '';
-
                   return (
                     <div key={task.id} className="col-md-6 col-lg-4 mb-3">
                       <div
@@ -458,7 +416,7 @@ const Dashboard = () => {
                           {isAdmin && task.assignedTo && (
                             <div className="text-muted small mb-1">
                               <i className="bx bx-user me-1" />
-                              {task.assignedTo?.fullName || task.assignedTo?.username}
+                              {task.assignedTo?.name || task.assignedTo?.username}
                             </div>
                           )}
                           <div className="d-flex align-items-center gap-2 mt-2">
@@ -471,8 +429,7 @@ const Dashboard = () => {
                           </div>
                           {task.deadline && (
                             <div className="text-muted mt-1" style={{ fontSize: '0.75rem' }}>
-                              {t('task.deadline', 'Deadline')}:{' '}
-                              {format(new Date(task.deadline), 'MMM dd, yyyy')}
+                              {t('task.deadline', 'Deadline')}: {format(new Date(task.deadline), 'MMM dd, yyyy')}
                             </div>
                           )}
                         </div>
@@ -485,16 +442,11 @@ const Dashboard = () => {
           </div>
         )}
 
-        {/* Empty state if no data */}
+        {/* Empty state */}
         {!loading && recentTasks.length === 0 && overdueTasks.length === 0 && (
           <div className="text-center py-5">
-            <i
-              className="bx bx-clipboard text-muted"
-              style={{ fontSize: 64, opacity: 0.3 }}
-            />
-            <p className="text-muted mt-3">
-              {t('dashboard.noTasks', 'No tasks to display yet.')}
-            </p>
+            <i className="bx bx-clipboard text-muted" style={{ fontSize: 64, opacity: 0.3 }} />
+            <p className="text-muted mt-3">{t('dashboard.noTasks', 'No tasks to display yet.')}</p>
           </div>
         )}
       </div>

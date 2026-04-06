@@ -102,8 +102,8 @@ router.post(
   authorize('SUPER_ADMIN', 'ADMIN'),
   [
     body('title').notEmpty().withMessage('Title is required').trim(),
-    body('assignedToId').notEmpty().withMessage('Assigned user is required').isInt().toInt(),
-    body('deadline').notEmpty().withMessage('Deadline is required').isISO8601().toDate(),
+    body('assignedToId').optional().isInt().toInt(),
+    body('deadline').optional().isISO8601().toDate(),
     body('description').optional().isString().trim(),
     body('categoryId').optional().isInt().toInt(),
     body('scheduledStart').optional().isISO8601().toDate(),
@@ -114,10 +114,12 @@ router.post(
     try {
       const { title, description, assignedToId, deadline, categoryId, scheduledStart, status } = req.body;
 
-      // Verify assignedToId is within accessible users
-      const accessibleUserIds = await getAccessibleUserIds(req.user.id, req.user.role, prisma);
-      if (!accessibleUserIds.includes(assignedToId)) {
-        return res.status(403).json({ message: 'You cannot assign tasks to this user.' });
+      // Verify assignedToId is within accessible users (if provided)
+      if (assignedToId) {
+        const accessibleUserIds = await getAccessibleUserIds(req.user.id, req.user.role, prisma);
+        if (!accessibleUserIds.includes(assignedToId)) {
+          return res.status(403).json({ message: 'You cannot assign tasks to this user.' });
+        }
       }
 
       const task = await prisma.task.create({
@@ -125,11 +127,11 @@ router.post(
           title,
           description,
           status: status || 'PENDING',
-          deadline,
-          scheduledStart,
-          assignedToId,
+          deadline: deadline || undefined,
+          scheduledStart: scheduledStart || undefined,
+          assignedToId: assignedToId || undefined,
           createdById: req.user.id,
-          categoryId,
+          categoryId: categoryId || undefined,
         },
         include: {
           assignedTo: { select: { id: true, name: true, username: true } },
