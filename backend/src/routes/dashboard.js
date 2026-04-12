@@ -28,7 +28,7 @@ router.get('/stats', authenticate, async (req, res, next) => {
           where: {
             ...userTaskWhere,
             status: { not: 'COMPLETED' },
-            deadline: { lt: now },
+            deadline: { not: null, lt: now },
           },
         }),
       ]);
@@ -51,7 +51,7 @@ router.get('/stats', authenticate, async (req, res, next) => {
           where: {
             ...taskWhere,
             status: { not: 'COMPLETED' },
-            deadline: { lt: now },
+            deadline: { not: null, lt: now },
           },
         }),
         prisma.user.count({ where: { id: { in: accessibleUserIds } } }),
@@ -112,14 +112,14 @@ router.get('/overdue', authenticate, async (req, res, next) => {
 
     const where =
       req.user.role === 'USER'
-        ? { assignedToId: req.user.id, status: { not: 'COMPLETED' }, deadline: { lt: now } }
+        ? { assignedToId: req.user.id, status: { not: 'COMPLETED' }, deadline: { not: null, lt: now } }
         : {
             OR: [
               { createdById: { in: accessibleUserIds } },
               { assignedToId: { in: accessibleUserIds } },
             ],
             status: { not: 'COMPLETED' },
-            deadline: { lt: now },
+            deadline: { not: null, lt: now },
           };
 
     const tasks = await prisma.task.findMany({

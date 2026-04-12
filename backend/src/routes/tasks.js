@@ -127,7 +127,7 @@ router.post(
           title,
           description,
           status: status || 'PENDING',
-          deadline: deadline || undefined,
+          deadline: deadline || null,
           scheduledStart: scheduledStart || undefined,
           assignedToId: assignedToId || undefined,
           createdById: req.user.id,

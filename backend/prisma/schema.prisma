@@ -51,7 +51,7 @@ model Task {
   description    String?
   status         TaskStatus @default(PENDING)
   progress       Int        @default(0)
-  deadline       DateTime
+  deadline       DateTime?
   scheduledStart DateTime?
   completedAt    DateTime?
   timeTaken      Int?
