@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import Select from 'react-select';
-import { format } from 'date-fns';
+import { format, formatDistanceToNow } from 'date-fns';
 import toast from 'react-hot-toast';
 import Layout from '../components/layout/Layout';
 import { useAuth } from '../contexts/AuthContext';
@@ -38,8 +38,8 @@ const Tasks = () => {
   const [userFilter, setUserFilter] = useState(searchParams.get('assignedTo') || '');
   const [categoryFilter, setCategoryFilter] = useState(searchParams.get('category') || '');
   const [search, setSearch] = useState(searchParams.get('search') || '');
-  const [sortBy, setSortBy] = useState(searchParams.get('sortBy') || 'deadline');
-  const [sortOrder, setSortOrder] = useState(searchParams.get('sortOrder') || 'asc');
+  const [sortBy, setSortBy] = useState(searchParams.get('sortBy') || 'createdAt');
+  const [sortOrder, setSortOrder] = useState(searchParams.get('sortOrder') || 'desc');
   const [page, setPage] = useState(parseInt(searchParams.get('page')) || 1);
   const [filtersOpen, setFiltersOpen] = useState(false);
 
@@ -130,8 +130,8 @@ const Tasks = () => {
       const response = await api.get('/tasks', { params });
       const data = response.data;
       setTasks(data.data || data.tasks || []);
-      setTotalPages(data.totalPages || 1);
-      setTotalItems(data.total || 0);
+      setTotalPages(data.totalPages || data.pagination?.pages || 1);
+      setTotalItems(data.total || data.pagination?.total || 0);
 
       // Update URL params
       const newParams = new URLSearchParams();
@@ -139,8 +139,8 @@ const Tasks = () => {
       if (userFilter) newParams.set('assignedTo', userFilter);
       if (categoryFilter) newParams.set('category', categoryFilter);
       if (searchDebounce) newParams.set('search', searchDebounce);
-      if (sortBy !== 'deadline') newParams.set('sortBy', sortBy);
-      if (sortOrder !== 'asc') newParams.set('sortOrder', sortOrder);
+      if (sortBy !== 'createdAt') newParams.set('sortBy', sortBy);
+      if (sortOrder !== 'desc') newParams.set('sortOrder', sortOrder);
       if (page > 1) newParams.set('page', page.toString());
       setSearchParams(newParams, { replace: true });
     } catch (err) {
@@ -264,9 +264,57 @@ const Tasks = () => {
       setSortOrder((prev) => (prev === 'asc' ? 'desc' : 'asc'));
     } else {
       setSortBy(field);
-      setSortOrder('asc');
+      // Most natural default: createdAt newest first, deadline soonest first
+      setSortOrder(field === 'createdAt' ? 'desc' : 'asc');
     }
     setPage(1);
+  };
+
+  // Format a date in GMT+3 (Baghdad/Istanbul/Moscow time)
+  const formatGmt3 = (dateInput, pattern = 'MMM dd, yyyy HH:mm') => {
+    if (!dateInput) return '';
+    const d = new Date(dateInput);
+    // Shift to GMT+3 regardless of viewer's local timezone
+    const gmt3 = new Date(d.getTime() + (d.getTimezoneOffset() + 180) * 60 * 1000);
+    return format(gmt3, pattern);
+  };
+
+  const formatRelative = (dateInput) => {
+    if (!dateInput) return '';
+    try {
+      return formatDistanceToNow(new Date(dateInput), { addSuffix: true });
+    } catch {
+      return '';
+    }
+  };
+
+  // Helper: render a sortable <th>
+  const renderSortableHeader = (field, label, align = 'left') => {
+    const isActive = sortBy === field;
+    const icon = isActive
+      ? (sortOrder === 'asc' ? 'bx-up-arrow-alt' : 'bx-down-arrow-alt')
+      : 'bx-transfer-alt';
+    return (
+      <th
+        className={`th-sortable ${isActive ? 'is-active' : ''}`}
+        onClick={() => toggleSort(field)}
+        style={{
+          padding: '14px 16px',
+          fontWeight: 700,
+          fontSize: '0.72rem',
+          color: '#8a8da0',
+          textTransform: 'uppercase',
+          letterSpacing: '0.04em',
+          textAlign: align,
+          whiteSpace: 'nowrap',
+        }}
+      >
+        {label}
+        <span className="sort-indicator">
+          <i className={`bx ${icon}`} style={{ transform: isActive ? 'none' : 'rotate(90deg)' }} />
+        </span>
+      </th>
+    );
   };
 
   const canModifyTask = (task) => {
@@ -622,26 +670,25 @@ const Tasks = () => {
               <div className="table-responsive">
                 <table className="table table-hover align-middle mb-0">
                   <thead>
-                    <tr style={{ backgroundColor: '#f8f9fc', borderBottom: '2px solid #e8eaf0' }}>
-                      <th style={{ padding: '14px 16px', fontWeight: 600, fontSize: '13px', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                    <tr>
+                      <th style={{ padding: '14px 16px', fontWeight: 700, fontSize: '0.72rem', color: '#8a8da0', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                         {t('tasks.table.title', 'Title')}
                       </th>
-                      <th style={{ padding: '14px 16px', fontWeight: 600, fontSize: '13px', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                      <th style={{ padding: '14px 16px', fontWeight: 700, fontSize: '0.72rem', color: '#8a8da0', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                         {t('tasks.table.assignedTo', 'Assigned To')}
                       </th>
-                      <th style={{ padding: '14px 16px', fontWeight: 600, fontSize: '13px', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                      <th style={{ padding: '14px 16px', fontWeight: 700, fontSize: '0.72rem', color: '#8a8da0', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                         {t('tasks.table.status', 'Status')}
                       </th>
-                      <th style={{ padding: '14px 16px', fontWeight: 600, fontSize: '13px', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                        {t('tasks.table.deadline', 'Deadline')}
-                      </th>
-                      <th style={{ padding: '14px 16px', fontWeight: 600, fontSize: '13px', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                      {renderSortableHeader('deadline', t('tasks.table.deadline', 'Deadline'))}
+                      {renderSortableHeader('createdAt', t('tasks.table.created', 'Created'))}
+                      <th style={{ padding: '14px 16px', fontWeight: 700, fontSize: '0.72rem', color: '#8a8da0', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                         {t('tasks.table.category', 'Category')}
                       </th>
-                      <th style={{ padding: '14px 16px', fontWeight: 600, fontSize: '13px', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                      <th style={{ padding: '14px 16px', fontWeight: 700, fontSize: '0.72rem', color: '#8a8da0', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                         {t('tasks.table.progress', 'Progress')}
                       </th>
-                      <th style={{ padding: '14px 16px', fontWeight: 600, fontSize: '13px', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.5px', textAlign: 'right' }}>
+                      <th style={{ padding: '14px 16px', fontWeight: 700, fontSize: '0.72rem', color: '#8a8da0', textTransform: 'uppercase', letterSpacing: '0.04em', textAlign: 'right' }}>
                         {t('tasks.table.actions', 'Actions')}
                       </th>
                     </tr>
@@ -694,8 +741,18 @@ const Tasks = () => {
                           <td style={{ padding: '14px 16px' }}>
                             {task.deadline ? (
                               <span className={new Date(task.deadline) < new Date() && task.status !== 'COMPLETED' ? 'text-danger fw-semibold' : ''}>
-                                {format(new Date(task.deadline), 'MMM dd, yyyy HH:mm')}
+                                {formatGmt3(task.deadline, 'MMM dd, yyyy HH:mm')}
                               </span>
+                            ) : (
+                              <span className="text-muted">-</span>
+                            )}
+                          </td>
+                          <td style={{ padding: '14px 16px', whiteSpace: 'nowrap' }}>
+                            {task.createdAt ? (
+                              <>
+                                <span style={{ color: '#2b2f44' }}>{formatGmt3(task.createdAt, 'MMM dd, yyyy')}</span>
+                                <span className="created-ago">({formatRelative(task.createdAt)})</span>
+                              </>
                             ) : (
                               <span className="text-muted">-</span>
                             )}
@@ -804,7 +861,13 @@ const Tasks = () => {
                         {task.deadline && (
                           <small className={new Date(task.deadline) < new Date() && task.status !== 'COMPLETED' ? 'text-danger' : 'text-muted'}>
                             <i className="bx bx-calendar me-1" />
-                            {format(new Date(task.deadline), 'MMM dd, yyyy')}
+                            {formatGmt3(task.deadline, 'MMM dd, yyyy')}
+                          </small>
+                        )}
+                        {task.createdAt && (
+                          <small className="text-muted">
+                            <i className="bx bx-time-five me-1" />
+                            {formatRelative(task.createdAt)}
                           </small>
                         )}
                         {category && (
@@ -841,7 +904,13 @@ const Tasks = () => {
 
             {/* Pagination */}
             {totalPages > 1 && (
-              <div className="mt-4">
+              <div className="mt-4 d-flex flex-column flex-md-row align-items-center justify-content-between gap-3">
+                <small className="text-muted" style={{ fontSize: '0.8rem' }}>
+                  {t('tasks.pagination.showing', 'Showing')}{' '}
+                  <strong>{(page - 1) * 10 + 1}</strong>–
+                  <strong>{Math.min(page * 10, totalItems)}</strong>{' '}
+                  {t('tasks.pagination.of', 'of')} <strong>{totalItems}</strong>
+                </small>
                 <Pagination
                   currentPage={page}
                   totalPages={totalPages}
